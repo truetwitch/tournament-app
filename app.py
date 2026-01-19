@@ -1,7 +1,7 @@
+
 import streamlit as st
 import random
 import math
-import graphviz
 
 st.title("Dynamic Tournament Generator 🎲")
 
@@ -53,12 +53,13 @@ def create_round(pool, round_number, initial=False):
 
     for i in range(0, len(pool) - 1, 2):
         matches.append((pool[i], pool[i+1]))
+
     return matches
 
 # --- Generate Fixtures ---
 if st.button("Generate Round Fixtures"):
     if st.session_state.round == 1:
-        if st.session_state.winners:  # NEW: allow pasted results to act as entrants
+        if st.session_state.winners:
             st.session_state.matches = create_round(
                 st.session_state.winners,
                 round_number=st.session_state.round,
@@ -71,7 +72,11 @@ if st.button("Generate Round Fixtures"):
         else:
             st.session_state.initial_players = players[:]
             st.session_state.winners = []
-            st.session_state.matches = create_round(players, round_number=1, initial=True)
+            st.session_state.matches = create_round(
+                players,
+                round_number=1,
+                initial=True
+            )
             st.session_state.round_generated = True
     else:
         if not st.session_state.winners:
@@ -93,8 +98,16 @@ if st.session_state.matches:
     scores = []
     for i, (p1, p2) in enumerate(st.session_state.matches):
         st.subheader(f"Match {i+1}: {p1} vs {p2}")
-        score1 = st.number_input(f"Score for {p1}", key=f"score1_{st.session_state.round}_{i}", step=1)
-        score2 = st.number_input(f"Score for {p2}", key=f"score2_{st.session_state.round}_{i}", step=1)
+        score1 = st.number_input(
+            f"Score for {p1}",
+            key=f"score1_{st.session_state.round}_{i}",
+            step=1
+        )
+        score2 = st.number_input(
+            f"Score for {p2}",
+            key=f"score2_{st.session_state.round}_{i}",
+            step=1
+        )
         scores.append((p1, p2, score1, score2))
 
     if st.button("Submit All Results and Redraw Next Round"):
@@ -107,6 +120,7 @@ if st.session_state.matches:
                 st.success(f"{p1} vs {p2} → {s1}-{s2}, Winner: {winner}")
                 st.session_state.winners.append(winner)
                 current_round_results.append((p1, p2, winner))
+
         if current_round_results:
             st.session_state.history.append((st.session_state.round, current_round_results))
 
@@ -124,14 +138,23 @@ if st.session_state.matches:
             st.session_state.round_generated = True
             st.success(f"Fixtures for Round {st.session_state.round} generated automatically.")
 
-# --- Simple text output for copy/paste ---
+# --- Fixtures Output + Copy Button ---
 if st.session_state.matches:
     st.header("Copy & Paste Fixture List")
-    fixture_lines = [f"{p1} vs {p2}" for p1, p2 in st.session_state.matches]
-    fixture_text = "\n".join(fixture_lines)
-    st.text_area("Copy Fixtures (Google Sheets friendly):", fixture_text, height=150)
-    ``
 
+    fixture_lines = [f"{p1} vs {p2}" for p1, p2 in st.session_state.matches]
+    fixture_text = "\n".join(fixture_lines).replace("\r\n", "\n").replace("\r", "\n")
+
+    # Display preview
+    st.text_area("Fixtures:", fixture_text, height=150)
+
+    # Copy button (download as txt)
+    st.download_button(
+        label="Copy Fixtures",
+        data=fixture_text,
+        file_name="fixtures.txt",
+        mime="text/plain",
+    )
 
 # --- Paste Spreadsheet Data ---
 st.header("Paste Spreadsheet Results")
@@ -153,6 +176,7 @@ if st.button("Process Pasted Results"):
             current_round_results.append((p1, p2, winner))
         except Exception:
             st.error(f"Could not parse line: {line}")
+
     if current_round_results:
         st.session_state.history.append((st.session_state.round, current_round_results))
 
@@ -169,23 +193,3 @@ if st.button("Process Pasted Results"):
         st.session_state.winners = []
         st.session_state.round_generated = True
         st.success(f"Fixtures for Round {st.session_state.round} generated automatically.")
-
-# --- Bracket visualization ---
-if st.session_state.history:
-    st.header("Tournament Bracket View")
-    dot = graphviz.Digraph()
-
-    for p in st.session_state.initial_players:
-        dot.node(p, p, shape="box")
-
-    for rnd, results in st.session_state.history:
-        for idx, (p1, p2, winner) in enumerate(results, start=1):
-            match_id = f"R{rnd}-M{idx}"
-            label = f"R{rnd} M{idx}\n{p1} vs {p2}"
-            dot.node(match_id, label, shape="ellipse")
-            dot.edge(p1, match_id)
-            dot.edge(p2, match_id)
-            dot.edge(match_id, winner)
-
-    st.graphviz_chart(dot)
-
