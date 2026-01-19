@@ -129,7 +129,9 @@ if st.session_state.matches:
     st.header("Copy & Paste Fixture List")
     fixture_lines = [f"{p1} vs {p2}" for p1, p2 in st.session_state.matches]
     fixture_text = "\n".join(fixture_lines)
-    st.text(fixture_text)
+    st.text_area("Copy Fixtures (Google Sheets friendly):", fixture_text, height=150)
+    ``
+
 
 # --- Paste Spreadsheet Data ---
 st.header("Paste Spreadsheet Results")
@@ -186,3 +188,4 @@ if st.session_state.history:
             dot.edge(match_id, winner)
 
     st.graphviz_chart(dot)
+
