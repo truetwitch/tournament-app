@@ -1,22 +1,27 @@
 
 import streamlit as st
+import streamlit.components.v1 as components
 import random
 import math
 
 st.title("Dynamic Tournament Generator 🎲")
 
 # ------------------------------
-# Copy-to-Clipboard Button
+# Copy-to-Clipboard Button (FIXED)
 # ------------------------------
 def clipboard_button(text_to_copy):
-    copy_js = f"""
+
+    # Escape problematic characters
+    safe_text = text_to_copy.replace("`", "\\`")
+
+    html_code = f"""
         <script>
-            function copyText() {{
-                navigator.clipboard.writeText(`{text_to_copy}`);
+            function copyToClipboard() {{
+                navigator.clipboard.writeText(`{safe_text}`);
             }}
         </script>
 
-        <button onclick="copyText()" style="
+        <button onclick="copyToClipboard()" style="
             padding: 10px 14px;
             background-color: #4CAF50;
             color: white;
@@ -25,10 +30,12 @@ def clipboard_button(text_to_copy):
             border-radius: 6px;
             cursor: pointer;
             margin-top: 10px;
-        ">📋 Copy Fixtures</button>
+        ">
+            📋 Copy Fixtures
+        </button>
     """
 
-    st.markdown(copy_js, unsafe_allow_html=True)
+    components.html(html_code, height=80)
 
 # ------------------------------
 # Entrants Input
@@ -95,7 +102,7 @@ def create_round(pool, round_number, initial=False):
 # ------------------------------
 if st.button("Generate Round Fixtures"):
     if st.session_state.round == 1:
-        if st.session_state.winners:  
+        if st.session_state.winners:
             st.session_state.matches = create_round(
                 st.session_state.winners,
                 round_number=1,
@@ -165,7 +172,7 @@ if st.session_state.matches:
             st.session_state.winners = []
 
 # ------------------------------
-# Fixtures Output (Clipboard)
+# Fixtures Output (Clipboard Button)
 # ------------------------------
 if st.session_state.matches:
     st.header("Copy & Paste Fixture List")
