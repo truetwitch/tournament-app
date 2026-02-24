@@ -316,19 +316,67 @@ if st.session_state.matches:
             st.success(f"Fixtures for Round {st.session_state.round} generated automatically.")
 
 # =========================================================
-# --------------- Simple text output (copy) ---------------
+# --------------- Copy / Download fixtures ----------------
 # =========================================================
 if st.session_state.matches:
-    st.header("Copy & Paste Fixture List")
+    st.header("Export Fixtures")
+
+    # Build lines
     fixture_lines = [f"{p1} vs {p2}" for p1, p2 in st.session_state.matches]
 
+    # Append a byes section if any exist for these fixtures
     if st.session_state.byes:
         fixture_lines.append("")  # blank line
         fixture_lines.append("The following players have byes:")
         fixture_lines.extend(st.session_state.byes)
 
-    fixture_text = "\n".join(fixture_lines)
-    st.text(fixture_text)
+    # 1) COPY-FRIENDLY (Windows line endings) – helps Google Sheets recognise each line as a new row
+    # Using \r\n ensures best compatibility across browsers/OS when pasting.
+    fixture_text_windows = "\r\n".join(fixture_lines)
+
+    st.subheader("Copy (one row per line)")
+    st.caption("Click the copy icon and then paste into Google Sheets; each line becomes its own row.")
+    st.code(fixture_text_windows)  # shows a copy button
+
+    # 2) ONE-COLUMN CSV download (each line is a row in one column)
+    import io
+    one_col_csv = io.StringIO()
+    for line in fixture_lines:
+        # Wrap in quotes to keep commas in team names intact
+        one_col_csv.write(f"\"{line}\"\r\n")
+    one_col_csv_bytes = one_col_csv.getvalue().encode("utf-8")
+
+    st.download_button(
+        label="⬇️ Download as CSV (one column)",
+        data=one_col_csv_bytes,
+        file_name="fixtures_one_column.csv",
+        mime="text/csv"
+    )
+
+    # 3) TWO-COLUMN CSV (Team A, Team B) when the line contains "vs"
+    two_col_csv = io.StringIO()
+    two_col_csv.write("Team A,Team B\r\n")
+    for line in fixture_lines:
+        if " vs " in line:
+            a, b = line.split(" vs ", 1)
+            # Quote cells to preserve commas/apostrophes
+            two_col_csv.write(f"\"{a}\",\"{b}\"\r\n")
+        else:
+            # Lines like the BYES header go in the first column only
+            two_col_csv.write(f"\"{line}\",\r\n")
+    two_col_csv_bytes = two_col_csv.getvalue().encode("utf-8")
+
+    st.download_button(
+        label="⬇️ Download as CSV (two columns: Team A, Team B)",
+        data=two_col_csv_bytes,
+        file_name="fixtures_two_columns.csv",
+        mime="text/csv"
+    )
+
+    st.caption(
+        "Tip: If pasting still goes into one cell, click the sheet once (don’t enter edit mode), "
+        "then paste; or use Data → Split text to rows."
+    )
 
 # =========================================================
 # ---------------- Paste Spreadsheet Data -----------------
@@ -411,3 +459,4 @@ if st.session_state.history:
             dot.edge(match_id, winner)
 
     st.graphviz_chart(dot)
+
