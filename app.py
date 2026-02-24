@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import random
 import math
@@ -25,7 +24,8 @@ if "matches" not in st.session_state:
 if "winners" not in st.session_state:
     st.session_state.winners = []
 if "history" not in st.session_state:
-    st.session_state.history = []  # list of (round_number, [(p1, p2, winner), ...])
+    # history is: list of (round_number, [(p1, p2, winner), ...])
+    st.session_state.history = []
 if "initial_players" not in st.session_state:
     st.session_state.initial_players = []
 if "round_generated" not in st.session_state:
@@ -159,8 +159,7 @@ if st.session_state.dupe_scan_done:
         to_remove_indices = set()
         for k, pair in enumerate(st.session_state.dupe_pairs):
             st.markdown(
-                f"**Possible duplicate:** {pair['a']}  ↔  {pair['b']} "
-                f"(similarity: {pair['score']:.2f})"
+                f"**Possible duplicate:** {pair['a']}  ↔  {pair['b']} (similarity: {pair['score']:.2f})"
             )
             choice = st.radio(
                 f"Decision for pair {k+1}",
@@ -341,6 +340,7 @@ raw_data = st.text_area("Paste rows in format: A vs B = 1-4", height=150)
 if st.button("Process Pasted Results"):
     lines = [line.strip() for line in raw_data.split("\n") if line.strip()]
     current_round_results = []
+    any_ties = False
     for line in lines:
         try:
             match, result = line.split("=")
@@ -350,6 +350,7 @@ if st.button("Process Pasted Results"):
             s1, s2 = int(s1), int(s2)
             if s1 == s2:
                 st.error(f"Tie detected in {p1} vs {p2}. Please adjust.")
+                any_ties = True
                 continue
             winner = p1 if s1 > s2 else p2
             st.write(f"{p1} vs {p2} → {s1}-{s2}, Winner: {winner}")
@@ -357,6 +358,9 @@ if st.button("Process Pasted Results"):
             current_round_results.append((p1, p2, winner))
         except Exception:
             st.error(f"Could not parse line: {line}")
+
+    if any_ties:
+        st.stop()
 
     if current_round_results:
         st.session_state.history.append((st.session_state.round, current_round_results))
@@ -382,7 +386,7 @@ if st.session_state.history:
     st.header("Tournament Bracket View")
 
     # If auto-disambiguation is off and identical names exist, Graphviz would merge them.
-    # We warn in that edge case.
+    # Warn in that edge case.
     init_lower = [n.lower() for n in st.session_state.initial_players]
     if len(set(init_lower)) != len(init_lower) and not st.session_state.auto_disambiguate:
         st.warning(
@@ -407,4 +411,3 @@ if st.session_state.history:
             dot.edge(match_id, winner)
 
     st.graphviz_chart(dot)
-``
